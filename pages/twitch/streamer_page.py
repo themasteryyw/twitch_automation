@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+
+from config.settings import Settings
+from framework import waits
+from pages.twitch.twitch_base_page import TwitchBasePage
+
+
+class StreamerPage(TwitchBasePage):
+    video_player = (By.CSS_SELECTOR, '[data-a-target="video-player"]')
+    ready_locator = video_player
+
+    def __init__(self, driver: WebDriver, settings: Settings, channel: str = "") -> None:
+        super().__init__(driver, settings)
+        self.channel = channel
+        self.path = f"/{channel}" if channel else "/"
+
+    def wait_until_loaded(self) -> "StreamerPage":
+        """'Fully loaded' = channel URL, player mounted, live video playing, on-screen images decoded.
+
+        Pop-ups (e.g. the mature-content gate) can appear *after* the player mounts,
+        so they are dismissed on every poll of the video wait.
+        """
+        if self.channel:
+            self.wait.until(waits.url_contains(f"/{self.channel}"), f"URL of channel '{self.channel}'")
+        super().wait_until_loaded()
+
+        def _video_ready(driver: WebDriver) -> bool:
+            self.dismiss_popups()
+            return waits.video_playing(driver)
+
+        self.wait.until(_video_ready, "live video to start playing", timeout=self.settings.video_timeout)
+        self.wait.until(waits.viewport_images_loaded, "on-screen images to finish loading")
+        self.log.info("Streamer page for '%s' fully loaded", self.channel)
+        return self
+
+    def is_video_playing(self) -> bool:
+        return waits.video_playing(self.driver)
