@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TypeVar
 from urllib.parse import urljoin
 
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -49,7 +49,7 @@ class BasePage:
         return self.wait_until_loaded()
 
     def wait_until_loaded(self: P) -> P:
-        self.wait.until(waits.document_ready, "document.readyState == complete")
+        self.wait.until(waits.document_ready, "document.readyState interactive/complete")
         self.dismiss_popups()
         if self.ready_locator is not None:
             self.get_element(self.ready_locator)
@@ -95,6 +95,19 @@ class BasePage:
             # An overlay appeared between the check and the click: wait it out once more.
             self.log.info("Click intercepted, waiting for the overlay to clear and retrying")
             self.wait_until_interactable(element).click()
+
+    def click_to_navigate(self, target: Locator, url_fragment: str, attempts: int = 2) -> None:
+        """Click a navigation control and verify the URL changed; re-click if the first click was lost."""
+        for attempt in range(1, attempts + 1):
+            self.click(target)
+            try:
+                self.wait.until(waits.url_contains(url_fragment), f"URL to contain '{url_fragment}'", timeout=5)
+                return
+            except TimeoutException:
+                if attempt == attempts:
+                    raise
+                self.log.warning("Click on %s did not navigate to '%s' (attempt %d/%d), retrying",
+                                 target, url_fragment, attempt, attempts)
 
     def type_text(self, locator: Locator, text: str, submit: bool = False) -> None:
         element = self.wait_until_interactable(locator)

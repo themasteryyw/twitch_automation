@@ -45,7 +45,13 @@ class Waiter:
 # --------------------------------------------------------------------------- #
 
 def document_ready(driver: WebDriver) -> bool:
-    return driver.execute_script("return document.readyState") == "complete"
+    """True once the DOM is parsed ('interactive' or 'complete').
+
+    Matches the 'eager' page-load strategy: live previews and autoplay video can
+    keep the window 'load' event (readyState 'complete') pending indefinitely,
+    so page readiness is decided by each page's ready_locator instead.
+    """
+    return driver.execute_script("return document.readyState") in ("interactive", "complete")
 
 
 def video_playing(driver: WebDriver) -> bool:

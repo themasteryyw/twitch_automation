@@ -15,5 +15,5 @@ class HomePage(TwitchBasePage):
 
     def open_search(self) -> BrowsePage:
         self.log.info("Clicking the search icon")
-        self.click(self.btn_search_icon)
+        self.click_to_navigate(self.btn_search_icon, BrowsePage.path)
         return self.go_to(BrowsePage)

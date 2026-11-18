@@ -51,8 +51,11 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
     setattr(item, f"rep_{report.when}", report)
 
     driver = getattr(item, "_driver", None)
-    if report.when == "call" and report.failed and driver is not None:
-        _attach_failure_artifacts(item, report, driver)
+    if report.when in ("setup", "call") and report.failed:
+        if call.excinfo is not None:
+            log.error("%s failed in %s: %s", item.name, report.when, call.excinfo.exconly().splitlines()[0])
+        if driver is not None:
+            _attach_failure_artifacts(item, report, driver)
 
 
 def _attach_failure_artifacts(item: pytest.Item, report: pytest.TestReport, driver) -> None:
@@ -61,7 +64,7 @@ def _attach_failure_artifacts(item: pytest.Item, report: pytest.TestReport, driv
     settings: Settings = item.config.stash[SETTINGS_KEY]
     extras = getattr(report, "extras", [])
     try:
-        path = take_screenshot(driver, settings.screenshots_dir, f"FAILED_{item.name}")
+        path = take_screenshot(driver, settings.screenshots_dir, f"FAILED_{report.when}_{item.name}")
         log.error("Test failed at %s - screenshot: %s", driver.current_url, path)
         html = _pytest_html(item)
         if html:

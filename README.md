@@ -62,8 +62,9 @@ Written to `artifacts/` (git-ignored):
 
 - `screenshots/` – step screenshots and `FAILED_*` screenshots
 - `logs/run_<timestamp>_<worker>.log` – full DEBUG log per run
-- `report.html` – self-contained pytest-html report; failures embed the
-  screenshot, URL and the last 20 browser console entries
+- `report.html` – self-contained pytest-html report; failures (in fixture
+  setup or in the test body) embed the screenshot, URL and the last 20 browser
+  console entries, and the exception is written to the run log
 
 ## Project structure
 
@@ -119,8 +120,13 @@ twitch_automation/
   already counts as loaded; `element_to_be_clickable` alone does not detect the overlay.
 - **Deterministic streamer choice.** The first visible live card in the
   StarCraft II category is preferred over a random pick, so failures reproduce.
-- **Page-load strategy `eager`** because a live stream keeps the `load` event
-  from firing reliably; explicit waits take over from DOM-ready.
+- **Page-load strategy `eager`** because live previews keep the `load` event
+  from firing reliably (observed in headless runs: `readyState` stayed below
+  `complete` for 15 s on a fully rendered home page). Pages therefore treat
+  `interactive` as DOM-ready and rely on their `ready_locator`.
+- **Navigation clicks are verified.** `click_to_navigate()` waits for the URL
+  to change and re-clicks once (with a WARNING) if the first click was lost;
+  observed once in headless mode, where a click on "Browse" left the URL at `/`.
 
 ## Observations on the live site
 
