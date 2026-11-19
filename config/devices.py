@@ -49,7 +49,7 @@ DEVICES: dict[str, DeviceProfile] = {
     )
 }
 
-DEFAULT_DEVICE = "Pixel 7"
+DEFAULT_DEVICE = "Galaxy S20"
 
 
 def get_device(name: str) -> DeviceProfile:
