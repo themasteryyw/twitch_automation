@@ -27,7 +27,15 @@ TWITCH_POPUPS: tuple[Popup, ...] = (
     Popup(
         name="Cookie consent banner",
         detect=(By.CSS_SELECTOR, '[data-a-target="consent-banner"], [data-a-target="consent-banner-accept"]'),
-        dismiss=((By.CSS_SELECTOR, '[data-a-target="consent-banner-accept"]'),),
+        dismiss=(
+            (By.CSS_SELECTOR, '[data-a-target="consent-banner-accept"]'),
+            # GDPR-region variant (seen from CI runners): the only accept control is "Proceed".
+            (
+                By.XPATH,
+                '//*[@data-a-target="consent-banner"]//*[self::button or self::a or @role="button"]'
+                '[normalize-space()="Proceed"]',
+            ),
+        ),
     ),
 )
 
