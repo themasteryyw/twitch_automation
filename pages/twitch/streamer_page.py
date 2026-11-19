@@ -27,7 +27,12 @@ class StreamerPage(TwitchBasePage):
         self.channel = channel
         self.path = f"/{channel}" if channel else "/"
 
-    def wait_until_loaded(self) -> "StreamerPage":
+    @property
+    def ready_timeout(self) -> int:
+        """The player mounts as part of video start-up, so it shares the video budget."""
+        return self.settings.video_timeout
+
+    def wait_until_loaded(self) -> StreamerPage:
         """'Fully loaded' = channel URL, player mounted, live video playing, on-screen images decoded.
 
         Pop-ups (e.g. the mature-content gate) can appear *after* the player mounts,
@@ -58,8 +63,11 @@ class StreamerPage(TwitchBasePage):
         if not self.is_visible(CONTENT_GATE) or self.is_visible(BTN_START_WATCHING):
             return False
         try:
-            self.wait.until(lambda d: self.is_visible(BTN_START_WATCHING) or not self.is_visible(CONTENT_GATE),
-                            "'Start Watching' button on the content gate", timeout=self.start_watching_grace)
+            self.wait.until(
+                lambda d: self.is_visible(BTN_START_WATCHING) or not self.is_visible(CONTENT_GATE),
+                "'Start Watching' button on the content gate",
+                timeout=self.start_watching_grace,
+            )
             return False
         except TimeoutException:
             return True

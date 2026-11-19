@@ -30,6 +30,11 @@ class BasePage:
     ready_locator: Locator | None = None
     popups: tuple[Popup, ...] = ()
 
+    @property
+    def ready_timeout(self) -> int | None:
+        """Max wait for ``ready_locator``; None = the default explicit-wait timeout."""
+        return None
+
     def __init__(self, driver: WebDriver, settings: Settings) -> None:
         self.driver = driver
         self.settings = settings
@@ -52,7 +57,7 @@ class BasePage:
         self.wait.until(waits.document_ready, "document.readyState interactive/complete")
         self.dismiss_popups()
         if self.ready_locator is not None:
-            self.get_element(self.ready_locator)
+            self.get_element(self.ready_locator, timeout=self.ready_timeout)
         self.log.info("%s loaded", type(self).__name__)
         return self
 
@@ -64,9 +69,11 @@ class BasePage:
 
     # ------------------------------ elements ----------------------------- #
 
-    def get_element(self, locator: Locator, clickable: bool = False) -> WebElement:
+    def get_element(self, locator: Locator, clickable: bool = False, timeout: int | None = None) -> WebElement:
         condition = EC.element_to_be_clickable if clickable else EC.visibility_of_element_located
-        return self.wait.until(condition(locator), f"element {locator} ({'clickable' if clickable else 'visible'})")
+        return self.wait.until(
+            condition(locator), f"element {locator} ({'clickable' if clickable else 'visible'})", timeout
+        )
 
     def is_visible(self, locator: Locator) -> bool:
         """Non-waiting visibility check, safe to call on every poll of a wait."""
@@ -89,7 +96,9 @@ class BasePage:
             self.dismiss_popups()
             return unobstructed(driver)
 
-        return self.wait.until(_ready, f"{target if not isinstance(target, WebElement) else 'element'} to be unobstructed")
+        return self.wait.until(
+            _ready, f"{target if not isinstance(target, WebElement) else 'element'} to be unobstructed"
+        )
 
     def click(self, target: Locator | WebElement) -> None:
         element = self.wait_until_interactable(target)
@@ -110,8 +119,13 @@ class BasePage:
             except TimeoutException:
                 if attempt == attempts:
                     raise
-                self.log.warning("Click on %s did not navigate to '%s' (attempt %d/%d), retrying",
-                                 target, url_fragment, attempt, attempts)
+                self.log.warning(
+                    "Click on %s did not navigate to '%s' (attempt %d/%d), retrying",
+                    target,
+                    url_fragment,
+                    attempt,
+                    attempts,
+                )
 
     def type_text(self, locator: Locator, text: str, submit: bool = False) -> None:
         element = self.wait_until_interactable(locator)
