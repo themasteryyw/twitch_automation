@@ -68,6 +68,10 @@ class BasePage:
         condition = EC.element_to_be_clickable if clickable else EC.visibility_of_element_located
         return self.wait.until(condition(locator), f"element {locator} ({'clickable' if clickable else 'visible'})")
 
+    def is_visible(self, locator: Locator) -> bool:
+        """Non-waiting visibility check, safe to call on every poll of a wait."""
+        return self.popup_handler.find_visible(locator) is not None
+
     def get_elements(self, locator: Locator) -> list[WebElement]:
         return self.wait.until(EC.presence_of_all_elements_located(locator), f"elements {locator}")
 

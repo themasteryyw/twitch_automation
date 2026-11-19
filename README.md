@@ -19,11 +19,13 @@ UI test framework for the Twitch mobile web site (**m.twitch.tv**), built with
 | 6 | Wait until everything is loaded, take a screenshot | `StreamerPage.wait_until_loaded()` + `screenshot` fixture |
 
 Pop-ups that can block the flow ("Open in App" bottom sheet, mature-content
-gate, cookie banner) are handled automatically on every page.
+gate, cookie banner) are handled automatically on every page. A mature-content
+gate that cannot be passed makes the test pick another streamer.
 
 ## Quick start
 
-Requirements: Python 3.10+ and Google Chrome. ChromeDriver is resolved
+Requirements: Python and Google Chrome. Verified on macOS with Python 3.15.2,
+Chrome 158, Selenium 4.53 and pytest 9.2. ChromeDriver is resolved
 automatically by Selenium Manager.
 
 ```bash
@@ -120,6 +122,11 @@ twitch_automation/
   already counts as loaded; `element_to_be_clickable` alone does not detect the overlay.
 - **Deterministic streamer choice.** The first visible live card in the
   StarCraft II category is preferred over a random pick, so failures reproduce.
+- **Gated channels are skipped, not forced.** If a channel shows the
+  content-classification gate without a "Start Watching" button (the logged-out
+  case, see below), `StreamerPage` raises `ContentGateBlocked` and
+  `select_streamer()` goes back to the results and tries the next candidate
+  (up to 3, each skip logged as a WARNING).
 - **Page-load strategy `eager`** because live previews keep the `load` event
   from firing reliably (observed in headless runs: `readyState` stayed below
   `complete` for 15 s on a fully rendered home page). Pages therefore treat
@@ -140,6 +147,17 @@ Verified on m.twitch.tv (Pixel 7 emulation) on 2026-11-18:
   scroll already reaches the bottom. Both scrolls are still performed as the
   scenario requires; `scroll_down()` logs the before/after position and a
   WARNING when a scroll cannot move, so this is visible in the run log.
+- **Mature-content gate not seen on m.twitch.tv.** On 2026-11-19, logged-out
+  channels in GTA V (a mature-rated game) and "Pools, Hot Tubs, and Beaches"
+  played straight away with no gate, and the Slots (gambling) category listed
+  no live channels at all despite showing 14.1K viewers. The gate handling is
+  therefore defensive and **not verified against a real gate on mobile web**.
+  Its locators follow the selector used by maintained Twitch tools such as
+  FrankerFaceZ (`content-classification-gate-overlay-start-watching-button`).
+  Purple-adblock's e2e findings (2026-10-07, desktop) report that a logged-out
+  viewer gets the gate with only "Log In" / "Sign Up", which is why gated
+  channels are skipped rather than dismissed. The skip path was tested by
+  simulating a gate on the first streamer.
 
 ## Extending
 

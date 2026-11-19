@@ -7,6 +7,9 @@ from selenium.webdriver.common.by import By
 from framework.base_page import BasePage
 from framework.popup_handler import Popup
 
+CONTENT_GATE = (By.CSS_SELECTOR, '[data-a-target*="content-classification-gate"]')
+BTN_START_WATCHING = (By.CSS_SELECTOR, '[data-a-target*="start-watching-button"]')
+
 TWITCH_POPUPS: tuple[Popup, ...] = (
     Popup(
         name="Open in App bottom sheet",
@@ -15,12 +18,9 @@ TWITCH_POPUPS: tuple[Popup, ...] = (
     ),
     Popup(
         name="Mature content gate",
-        detect=(
-            By.CSS_SELECTOR,
-            '[data-a-target*="content-classification-gate"], [data-a-target*="start-watching-button"]',
-        ),
+        detect=CONTENT_GATE,
         dismiss=(
-            (By.CSS_SELECTOR, '[data-a-target*="start-watching-button"]'),
+            BTN_START_WATCHING,
             (By.XPATH, '//button[.//*[normalize-space()="Start Watching"]]'),
         ),
     ),

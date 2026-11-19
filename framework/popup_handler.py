@@ -56,7 +56,7 @@ class PopupHandler:
 
     # ------------------------------------------------------------------ #
 
-    def _visible(self, locator: Locator) -> WebElement | None:
+    def find_visible(self, locator: Locator) -> WebElement | None:
         for element in self.driver.find_elements(*locator):
             try:
                 if element.is_displayed():
@@ -66,10 +66,10 @@ class PopupHandler:
         return None
 
     def _try_dismiss(self, popup: Popup) -> bool:
-        if self._visible(popup.detect) is None:
+        if self.find_visible(popup.detect) is None:
             return False
         for locator in popup.dismiss:
-            button = self._visible(locator)
+            button = self.find_visible(locator)
             if button is None:
                 continue
             try:
@@ -86,11 +86,11 @@ class PopupHandler:
     def _warn_on_unknown_modal(self) -> None:
         if self._warned_unknown:
             return
-        modal = self._visible(GENERIC_MODAL)
+        modal = self.find_visible(GENERIC_MODAL)
         if modal is None:
             return
         # The modal may have rendered between the registered checks and this one; re-check before warning.
-        if any(self._visible(p.detect) is not None for p in self.popups):
+        if any(self.find_visible(p.detect) is not None for p in self.popups):
             return
         self._warned_unknown = True
         label = modal.get_attribute("aria-label") or "<no aria-label>"
