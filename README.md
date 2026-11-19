@@ -1,5 +1,7 @@
 # Twitch WAP Automation
 
+[![CI](https://github.com/themasteryyw/twitch_automation/actions/workflows/ci.yml/badge.svg)](https://github.com/themasteryyw/twitch_automation/actions/workflows/ci.yml)
+
 UI test framework for the Twitch mobile web site (**m.twitch.tv**), built with
 **Python + Selenium 4 + pytest**, running on **Google Chrome's mobile emulator**.
 
@@ -41,6 +43,22 @@ pytest --headless                        # CI mode
 pytest -n 2                              # parallel (pytest-xdist)
 ```
 
+Lint and format (config in `pyproject.toml`):
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+ruff format --check .
+```
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+
+1. **lint**: `ruff check` and `ruff format --check`
+2. **test**: `pytest --headless` on Ubuntu with Chrome; `artifacts/` (report, logs,
+   screenshots) is uploaded as a build artifact even when the run fails
+
 ### Configuration
 
 Every value resolves as **CLI option > environment variable > default**
@@ -49,7 +67,7 @@ Every value resolves as **CLI option > environment variable > default**
 | Setting | CLI | Env var | Default |
 |---|---|---|---|
 | Site under test | `--base-url` | `TWITCH_BASE_URL` | `https://m.twitch.tv/` |
-| Emulated device | `--device` | `DEVICE` | `Pixel 7` |
+| Emulated device | `--device` | `DEVICE` | `Galaxy S20` |
 | Headless | `--headless` | `HEADLESS` | `false` |
 | Explicit-wait timeout (s) | `--timeout` | `TIMEOUT` | `15` |
 | Video start timeout (s) | – | `VIDEO_TIMEOUT` | `45` |
@@ -85,17 +103,26 @@ twitch_automation/
 ├── pages/
 │   └── twitch/            # Twitch page objects (locators + actions only)
 │       ├── twitch_base_page.py   # registers Twitch pop-ups
-│       ├── home_page.py
-│       ├── browse_page.py
-│       ├── search_results_page.py
-│       └── streamer_page.py
+│       ├── home_page.py          # home -> tap the search (Browse) icon
+│       ├── browse_page.py        # type the search term
+│       ├── search_results_page.py  # scroll, pick a streamer (skips gated channels)
+│       └── streamer_page.py      # wait until the live video is really playing
 ├── tests/
 │   ├── conftest.py        # fixtures: driver -> pages, screenshot factory
-│   └── test_search_streamer.py
+│   └── test_search_streamer.py  # the 6-step scenario from the task
+├── .github/workflows/ci.yml  # lint + headless test on every push / PR
 ├── conftest.py            # CLI options, settings, logging, failure artifacts
-├── pytest.ini
-└── requirements.txt
+├── pytest.ini             # markers (p0 / p1 / wap), live log format
+├── pyproject.toml         # ruff lint/format config
+├── requirements.txt
+├── requirements-dev.txt   # ruff
+├── docs/                  # demo GIF for this README
+└── artifacts/             # run output (git-ignored): screenshots/, logs/, report.html
 ```
+
+Layering: tests describe *what* the scenario does, page objects describe *how*
+to act on each page, and `framework/` owns waiting, pop-ups, the driver and
+reporting. A change in one layer does not ripple into the others.
 
 ## Design decisions
 
