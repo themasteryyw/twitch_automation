@@ -7,9 +7,10 @@ Settings are built once per session and are immutable afterwards.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from config.devices import DEFAULT_DEVICE, get_device
 
@@ -28,9 +29,9 @@ class Settings:
     device: str = DEFAULT_DEVICE
     headless: bool = False
     language: str = "en-US"
-    timeout: int = 15            # default explicit-wait timeout (s)
+    timeout: int = 15  # default explicit-wait timeout (s)
     page_load_timeout: int = 30  # driver page-load timeout (s)
-    video_timeout: int = 45      # max wait for the live video to start (s)
+    video_timeout: int = 45  # max wait for the live video to start (s)
     search_term: str = "StarCraft II"
     scroll_times: int = 2
     artifacts_dir: Path = PROJECT_ROOT / "artifacts"
@@ -50,7 +51,7 @@ class Settings:
     }
 
     @classmethod
-    def load(cls, cli_getter: Callable[[str], Any] | None = None) -> "Settings":
+    def load(cls, cli_getter: Callable[[str], Any] | None = None) -> Settings:
         values: dict[str, Any] = {}
         for f in fields(cls):
             env_name, cli_dest, cast = cls._SOURCES[f.name]

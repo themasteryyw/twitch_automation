@@ -46,8 +46,14 @@ class SearchResultsPage(TwitchBasePage):
         matching = [c for c in visible if category and category.lower() in c.text.lower()]
         ordered = matching + [c for c in visible if c not in matching] + [c for c in cards if c not in visible]
         channels = list(dict.fromkeys(self._channel_of(c) for c in ordered))
-        self.log.info("Streamer candidates %s (%d cards, %d visible, %d matching '%s')",
-                      channels, len(cards), len(visible), len(matching), category)
+        self.log.info(
+            "Streamer candidates %s (%d cards, %d visible, %d matching '%s')",
+            channels,
+            len(cards),
+            len(visible),
+            len(matching),
+            category,
+        )
         return channels
 
     def _card_of(self, channel: str) -> Locator:

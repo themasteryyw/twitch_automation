@@ -7,7 +7,8 @@ Conditions are plain callables ``(driver) -> truthy`` and can be composed.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -43,6 +44,7 @@ class Waiter:
 # --------------------------------------------------------------------------- #
 # Page conditions (JavaScript predicates)
 # --------------------------------------------------------------------------- #
+
 
 def document_ready(driver: WebDriver) -> bool:
     """True once the DOM is parsed ('interactive' or 'complete').
@@ -101,6 +103,7 @@ def element_unobstructed(element: WebElement) -> Condition:
     ``element_to_be_clickable`` only checks displayed + enabled, so it passes even
     when an overlay (bottom sheet, modal backdrop) covers the element.
     """
+
     def _condition(driver: WebDriver) -> WebElement | bool:
         hit = driver.execute_script(
             """

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Callable, Iterator
 
 import pytest
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -21,10 +22,8 @@ def driver(request: pytest.FixtureRequest, settings: Settings) -> Iterator[WebDr
     driver = create_driver(settings, device_name=marker.args[0] if marker else None)
     request.node._driver = driver  # used by the failure hook in the root conftest
     yield driver
-    try:
+    with contextlib.suppress(Exception):
         driver.quit()
-    except Exception:
-        pass
 
 
 @pytest.fixture
