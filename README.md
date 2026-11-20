@@ -3,7 +3,7 @@
 [![CI](https://github.com/themasteryyw/twitch_automation/actions/workflows/ci.yml/badge.svg)](https://github.com/themasteryyw/twitch_automation/actions/workflows/ci.yml)
 
 UI test framework for the Twitch mobile web site (**m.twitch.tv**), built with
-**Python + Selenium 4 + pytest**, running on **Google Chrome's mobile emulator**.
+**Python + Selenium 4 + pytest + pytest-bdd**, running on **Google Chrome's mobile emulator**.
 
 ![Test run](docs/demo.gif)
 
@@ -11,14 +11,41 @@ UI test framework for the Twitch mobile web site (**m.twitch.tv**), built with
 
 ## Scenario
 
-| # | Step | Where it lives |
+The task's six steps are written in Gherkin in
+[`features/search_streamer.feature`](features/search_streamer.feature); step
+definitions live in `tests/e2e/test_search_streamer.py` and only call page objects.
+
+```gherkin
+Scenario Outline: Search "<game>" and open one of its live streamers
+  Given I open Twitch mobile web
+  When I tap the search icon
+  And I search for "<game>"
+  And I scroll down <scrolls> times
+  Then the search results include live channels playing "<game>"
+  When I select a streamer playing "<game>"
+  Then the streamer page is fully loaded on the mobile site
+  And the selected streamer is playing "<game>"
+  And I take a screenshot of the streamer page
+
+  Examples:
+    | game              | scrolls |
+    | StarCraft II      | 2       |
+    | League of Legends | 2       |
+```
+
+| # | Task step | Where it lives |
 |---|------|----------------|
 | 1 | Go to Twitch | `home_page` fixture → `HomePage.open()` |
 | 2 | Click the search icon | `HomePage.open_search()` |
 | 3 | Input "StarCraft II" | `BrowsePage.search()` |
 | 4 | Scroll down 2 times | `SearchResultsPage.scroll_down(times=2)` |
-| 5 | Select one streamer | `SearchResultsPage.select_streamer()` |
+| 5 | Select one streamer | `SearchResultsPage.select_streamer(category=game)` |
 | 6 | Wait until everything is loaded, take a screenshot | `StreamerPage.wait_until_loaded()` + `screenshot` fixture |
+
+`StarCraft II` is the task's scenario; the second row shows that a new search
+case is one line in the Examples table. A streamer counts as relevant when the
+category on its result card equals the searched game (case-insensitive), and
+both the result list and the chosen streamer are asserted on that.
 
 Pop-ups that can block the flow ("Open in App" bottom sheet, mature-content
 gate, cookie banner) are handled automatically on every page. A mature-content
@@ -27,7 +54,7 @@ gate that cannot be passed makes the test pick another streamer.
 ## Quick start
 
 Requirements: Python and Google Chrome. Verified on macOS with Python 3.15.2,
-Chrome 158, Selenium 4.53 and pytest 9.2. ChromeDriver is resolved
+Chrome 158, Selenium 4.53, pytest 9.2 and pytest-bdd 9.0. ChromeDriver is resolved
 automatically by Selenium Manager.
 
 ```bash
@@ -36,7 +63,8 @@ cd twitch_automation
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-pytest                                   # run everything
+pytest                                   # run everything (unit + e2e)
+pytest -m unit                           # offline framework tests, < 1 s
 pytest -m p0                             # critical path only
 pytest --device "iPhone 14 Pro"          # another emulated device
 pytest --headless                        # CI mode
@@ -46,7 +74,6 @@ pytest -n 2                              # parallel (pytest-xdist)
 Lint and format (config in `pyproject.toml`):
 
 ```bash
-pip install -r requirements-dev.txt
 ruff check .
 ruff format --check .
 ```
@@ -55,9 +82,10 @@ ruff format --check .
 
 `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
 
-1. **lint**: `ruff check` and `ruff format --check`
-2. **test**: `pytest --headless` on Ubuntu with Chrome; `artifacts/` (report, logs,
-   screenshots) is uploaded as a build artifact even when the run fails
+1. **lint-and-unit**: `ruff check`, `ruff format --check` and `pytest -m unit`
+   (no browser or network, so a Twitch outage cannot hide a framework regression)
+2. **test**: `pytest -m "not unit" --headless` on Ubuntu with Chrome; `artifacts/`
+   (report, logs, screenshots) is uploaded as a build artifact even when the run fails
 
 ### Configuration
 
@@ -71,8 +99,6 @@ Every value resolves as **CLI option > environment variable > default**
 | Headless | `--headless` | `HEADLESS` | `false` |
 | Explicit-wait timeout (s) | `--timeout` | `TIMEOUT` | `15` |
 | Video start timeout (s) | – | `VIDEO_TIMEOUT` | `45` |
-| Search term | – | `SEARCH_TERM` | `StarCraft II` |
-| Scroll count | – | `SCROLL_TIMES` | `2` |
 
 A single test can pin a device with `@pytest.mark.device("Galaxy S20")`.
 
@@ -107,60 +133,25 @@ twitch_automation/
 │       ├── browse_page.py        # type the search term
 │       ├── search_results_page.py  # scroll, pick a streamer (skips gated channels)
 │       └── streamer_page.py      # wait until the live video is really playing
+├── features/
+│   └── search_streamer.feature  # the 6-step scenario in Gherkin (test data in Examples)
 ├── tests/
 │   ├── conftest.py        # fixtures: driver -> pages, screenshot factory
-│   └── test_search_streamer.py  # the 6-step scenario from the task
+│   ├── e2e/
+│   │   └── test_search_streamer.py  # pytest-bdd step definitions
+│   └── unit/              # offline tests: card parsing, settings, devices, pop-ups, waits
 ├── .github/workflows/ci.yml  # lint + headless test on every push / PR
 ├── conftest.py            # CLI options, settings, logging, failure artifacts
-├── pytest.ini             # markers (p0 / p1 / wap), live log format
+├── pytest.ini             # markers (p0 / p1 / wap / unit), feature dir, live log format
 ├── pyproject.toml         # ruff lint/format config
 ├── requirements.txt
-├── requirements-dev.txt   # ruff
 ├── docs/                  # demo GIF for this README
 └── artifacts/             # run output (git-ignored): screenshots/, logs/, report.html
 ```
 
-Layering: tests describe *what* the scenario does, page objects describe *how*
+Layering: the feature file describes *what* the scenario does, page objects describe *how*
 to act on each page, and `framework/` owns waiting, pop-ups, the driver and
 reporting. A change in one layer does not ripple into the others.
-
-## Design decisions
-
-- **Layered.** `framework/` knows nothing about Twitch; `pages/twitch/` knows
-  nothing about pytest; tests read like the scenario and contain no locators.
-- **Every page defines "loaded".** `BasePage.wait_until_loaded()` waits for
-  `document.readyState`, clears pop-ups, then waits for the page's
-  `ready_locator`. Navigation goes through `go_to()`, so a page object is
-  always returned in a verified state.
-- **"Streamer page fully loaded" is explicit:** channel URL → player mounted →
-  `<video>` has data, is not paused and `currentTime > 0` → on-screen images
-  decoded. Checking `readyState` alone passes while a stream is still buffering.
-- **No `time.sleep`, no implicit waits.** All waits poll named conditions, so a
-  timeout says exactly what never happened. Scrolling waits for the scroll
-  position to settle instead of sleeping.
-- **Pop-ups are data.** Each `Popup(name, detect, dismiss)` is one entry in a
-  table. The handler runs on every page load *and on every poll of the video
-  wait*, catching gates that appear after the player mounts. A visible but
-  unregistered `aria-modal` is logged so new pop-ups get noticed.
-- **Act only on unobstructed elements.** `click()` / `type_text()` wait until
-  the element itself is the hit target at its centre (`elementFromPoint`),
-  dismissing pop-ups on every poll. On this SPA the "Open in App" sheet renders
-  ~0.6 s *after* the client-side navigation to `/directory`, i.e. after the page
-  already counts as loaded; `element_to_be_clickable` alone does not detect the overlay.
-- **Deterministic streamer choice.** The first visible live card in the
-  StarCraft II category is preferred over a random pick, so failures reproduce.
-- **Gated channels are skipped, not forced.** If a channel shows the
-  content-classification gate without a "Start Watching" button (the logged-out
-  case, see below), `StreamerPage` raises `ContentGateBlocked` and
-  `select_streamer()` goes back to the results and tries the next candidate
-  (up to 3, each skip logged as a WARNING).
-- **Page-load strategy `eager`** because live previews keep the `load` event
-  from firing reliably (observed in headless runs: `readyState` stayed below
-  `complete` for 15 s on a fully rendered home page). Pages therefore treat
-  `interactive` as DOM-ready and rely on their `ready_locator`.
-- **Navigation clicks are verified.** `click_to_navigate()` waits for the URL
-  to change and re-clicks once (with a WARNING) if the first click was lost;
-  observed once in headless mode, where a click on "Browse" left the URL at `/`.
 
 ## Observations on the live site
 
@@ -185,13 +176,3 @@ Verified on m.twitch.tv (Pixel 7 emulation) on 2026-11-18:
   viewer gets the gate with only "Log In" / "Sign Up", which is why gated
   channels are skipped rather than dismissed. The skip path was tested by
   simulating a gate on the first streamer.
-
-## Extending
-
-- **New page:** subclass `TwitchBasePage`, declare locators (`btn_`, `input_`,
-  `lbl_` prefixes) and a `ready_locator`, return it from the previous page via
-  `go_to(NewPage)`.
-- **New pop-up:** add a `Popup(...)` entry to `TWITCH_POPUPS`.
-- **New device:** add a `DeviceProfile` to `config/devices.py`.
-- **New site:** add `pages/<site>/` with its own base page; `framework/` is reused as is.
-- **Prioritise runs:** tag tests `@pytest.mark.p0` / `p1` and select with `-m`.

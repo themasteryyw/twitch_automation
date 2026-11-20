@@ -7,19 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  lint-and-unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r requirements-dev.txt
+      - run: pip install -r requirements.txt
       - run: ruff check .
       - run: ruff format --check .
+      - name: Unit tests (offline, no browser)
+        run: pytest -m unit
 
   test:
-    needs: lint
+    needs: lint-and-unit
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -30,8 +32,8 @@ jobs:
           cache: pip
       - uses: browser-actions/setup-chrome@v1
       - run: pip install -r requirements.txt
-      - name: Run tests (headless Chrome, mobile emulation)
-        run: pytest --headless
+      - name: E2E BDD scenarios (headless Chrome, mobile emulation)
+        run: pytest -m "not unit" --headless
       - name: Upload report, logs and screenshots
         if: always()
         uses: actions/upload-artifact@v4
