@@ -22,9 +22,10 @@ class StreamerPage(TwitchBasePage):
     ready_locator = video_player
     start_watching_grace = 3  # s to wait for "Start Watching" after the gate renders
 
-    def __init__(self, driver: WebDriver, settings: Settings, channel: str = "") -> None:
+    def __init__(self, driver: WebDriver, settings: Settings, channel: str = "", category: str | None = None) -> None:
         super().__init__(driver, settings)
         self.channel = channel
+        self.category = category  # as shown on the search result card; the mobile channel page does not display it
         self.path = f"/{channel}" if channel else "/"
 
     @property
