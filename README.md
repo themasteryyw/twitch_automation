@@ -60,7 +60,8 @@ gate that cannot be passed makes the test pick another streamer.
 
 Requirements: Python and Google Chrome. Verified on macOS with Python 3.15.2,
 Chrome 158, Selenium 4.53, pytest 9.2 and pytest-bdd 9.0. ChromeDriver is resolved
-automatically by Selenium Manager.
+automatically by Selenium Manager. The scenario passes on all emulated devices:
+Galaxy S20 (default), Pixel 7 and iPhone 14 Pro.
 
 ```bash
 git clone https://github.com/themasteryyw/twitch_automation.git
