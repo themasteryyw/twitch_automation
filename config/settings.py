@@ -32,8 +32,7 @@ class Settings:
     timeout: int = 15  # default explicit-wait timeout (s)
     page_load_timeout: int = 30  # driver page-load timeout (s)
     video_timeout: int = 45  # max wait for the live video to start (s)
-    search_term: str = "StarCraft II"
-    scroll_times: int = 2
+    remote_url: str = ""  # Selenium Grid / cloud hub; empty = local Chrome
     artifacts_dir: Path = PROJECT_ROOT / "artifacts"
 
     # name -> (env var, CLI option dest, caster)
@@ -45,8 +44,7 @@ class Settings:
         "timeout": ("TIMEOUT", "timeout", int),
         "page_load_timeout": ("PAGE_LOAD_TIMEOUT", None, int),
         "video_timeout": ("VIDEO_TIMEOUT", None, int),
-        "search_term": ("SEARCH_TERM", None, str),
-        "scroll_times": ("SCROLL_TIMES", None, int),
+        "remote_url": ("SELENIUM_REMOTE_URL", "remote_url", str),
         "artifacts_dir": ("ARTIFACTS_DIR", None, Path),
     }
 

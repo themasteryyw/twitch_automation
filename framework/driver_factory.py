@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from config.devices import DeviceProfile, get_device
 from config.settings import Settings
@@ -36,14 +37,20 @@ def build_chrome_options(settings: Settings, device_name: str) -> ChromeOptions:
     return options
 
 
-def create_driver(settings: Settings, device_name: str | None = None) -> webdriver.Chrome:
+def create_driver(settings: Settings, device_name: str | None = None) -> WebDriver:
     device_name = device_name or settings.device
-    log.info("Starting Chrome (device=%s, headless=%s)", device_name, settings.headless)
-    # Selenium Manager (bundled with Selenium >= 4.11) resolves chromedriver automatically.
-    driver = webdriver.Chrome(options=build_chrome_options(settings, device_name))
+    options = build_chrome_options(settings, device_name)
+    if settings.remote_url:
+        log.info("Starting remote Chrome at %s (device=%s)", settings.remote_url, device_name)
+        driver: WebDriver = webdriver.Remote(command_executor=settings.remote_url, options=options)
+    else:
+        log.info("Starting Chrome (device=%s, headless=%s)", device_name, settings.headless)
+        # Selenium Manager (bundled with Selenium >= 4.11) resolves chromedriver automatically.
+        driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(0)  # explicit waits only
     driver.set_page_load_timeout(settings.page_load_timeout)
-    if not settings.headless:
+    # Window fitting uses CDP, which only a local ChromeDriver exposes; remote nodes own their display.
+    if not settings.headless and not settings.remote_url:
         _fit_window_to_device(driver, get_device(device_name))
     return driver
 

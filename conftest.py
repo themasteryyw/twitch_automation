@@ -20,6 +20,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     group.addoption("--base-url", action="store", default=None, help="Site under test (default https://m.twitch.tv/)")
     group.addoption("--device", action="store", default=None, choices=sorted(DEVICES), help="Emulated device")
     group.addoption("--headless", action="store_true", default=None, help="Run Chrome headless")
+    group.addoption("--remote-url", action="store", default=None, help="Selenium Grid / cloud hub URL")
     group.addoption("--timeout", action="store", default=None, help="Default explicit wait timeout (s)")
 
 
