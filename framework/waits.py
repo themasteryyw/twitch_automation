@@ -56,16 +56,25 @@ def document_ready(driver: WebDriver) -> bool:
     return driver.execute_script("return document.readyState") in ("interactive", "complete")
 
 
-def video_playing(driver: WebDriver) -> bool:
-    """True when the live player has data, is not paused and time is advancing."""
-    return bool(
-        driver.execute_script(
+def video_playing() -> Condition:
+    """Condition factory: True once the player has data, is not paused and its time advanced between two polls.
+
+    A frozen or stalled stream keeps ``currentTime`` fixed, so a single ``currentTime > 0`` check is not enough.
+    """
+    last: dict[str, float | None] = {"t": None}
+
+    def _condition(driver: WebDriver) -> bool:
+        t = driver.execute_script(
             """
             const v = document.querySelector('video');
-            return !!v && v.readyState >= 3 && !v.paused && v.currentTime > 0;
+            return v && v.readyState >= 3 && !v.paused ? v.currentTime : null;
             """
         )
-    )
+        advancing = t is not None and last["t"] is not None and t > last["t"]
+        last["t"] = t
+        return advancing
+
+    return _condition
 
 
 def viewport_images_loaded(driver: WebDriver) -> bool:

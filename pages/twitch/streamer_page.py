@@ -45,19 +45,29 @@ class StreamerPage(TwitchBasePage):
             self.wait.until(waits.url_contains(f"/{self.channel}"), f"URL of channel '{self.channel}'")
         super().wait_until_loaded()
 
+        video_playing = waits.video_playing()
+
         def _video_ready(driver: WebDriver) -> bool:
             self.dismiss_popups()
             if self._gate_blocks_playback():
                 raise ContentGateBlocked(f"Channel '{self.channel}' is behind a content gate with no way past it")
-            return waits.video_playing(driver)
+            return video_playing(driver)
 
         self.wait.until(_video_ready, "live video to start playing", timeout=self.settings.video_timeout)
-        self.wait.until(waits.viewport_images_loaded, "on-screen images to finish loading")
+        self.wait_for_viewport_images()
         self.log.info("Streamer page for '%s' fully loaded", self.channel)
         return self
 
-    def is_video_playing(self) -> bool:
-        return waits.video_playing(self.driver)
+    def is_video_playing(self, timeout: int = 5) -> bool:
+        """Video time keeps advancing, sampled over up to ``timeout`` seconds."""
+        try:
+            self.wait.until(waits.video_playing(), "live video time to advance", timeout=timeout)
+            return True
+        except TimeoutException:
+            return False
+
+    def wait_for_viewport_images(self) -> None:
+        self.wait.until(waits.viewport_images_loaded, "on-screen images to finish loading")
 
     def _gate_blocks_playback(self) -> bool:
         """Gate on screen and its "Start Watching" button does not show up within a short grace period."""

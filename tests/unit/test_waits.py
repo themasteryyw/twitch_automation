@@ -44,3 +44,13 @@ def test_waiter_timeout_names_what_never_happened():
     waiter = waits.Waiter(ScriptedDriver(), default_timeout=1, poll=0.05)
     with pytest.raises(TimeoutException, match=r"Timed out after 0.2s waiting for: live video"):
         waiter.until(lambda d: False, "live video", timeout=0.2)
+
+
+def test_video_playing_needs_time_to_advance():
+    condition, driver = waits.video_playing(), ScriptedDriver(1.0, 1.4, 1.4)
+    assert [condition(driver) for _ in range(3)] == [False, True, False]
+
+
+def test_video_playing_rejects_a_paused_or_buffering_player():
+    condition, driver = waits.video_playing(), ScriptedDriver(1.0, None, 2.0)
+    assert [condition(driver) for _ in range(3)] == [False, False, False]

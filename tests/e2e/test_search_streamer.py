@@ -8,7 +8,6 @@ from pathlib import Path
 from pytest_bdd import given, parsers, scenarios, then, when
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from framework import waits
 from pages.twitch import BrowsePage, HomePage, SearchResultsPage, StreamerPage
 
 scenarios("search_streamer.feature")
@@ -52,7 +51,7 @@ def streamer_page_loaded(driver: WebDriver, streamer_page: StreamerPage) -> None
     assert "m.twitch.tv" in driver.current_url, "Must stay on the mobile (WAP) site"
     assert f"/{streamer_page.channel}" in driver.current_url.lower(), f"Not on channel '{streamer_page.channel}'"
     assert streamer_page.is_video_playing(), "Live video should be playing"
-    assert waits.viewport_images_loaded(driver), "On-screen images should be loaded"
+    streamer_page.wait_for_viewport_images()
 
 
 @then(parsers.parse('the selected streamer is playing "{game}"'))
