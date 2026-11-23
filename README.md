@@ -27,9 +27,13 @@ Scenario Outline: Search "<game>" and open one of its live streamers
   And the selected streamer is playing "<game>"
   And I take a screenshot of the streamer page
 
-  Examples:
+  Examples: Task scenario
+    | game         | scrolls |
+    | StarCraft II | 2       |
+
+  @extra
+  Examples: Extra search case, opt-in with -m extra
     | game              | scrolls |
-    | StarCraft II      | 2       |
     | League of Legends | 2       |
 ```
 
@@ -42,8 +46,9 @@ Scenario Outline: Search "<game>" and open one of its live streamers
 | 5 | Select one streamer | `SearchResultsPage.select_streamer(category=game)` |
 | 6 | Wait until everything is loaded, take a screenshot | `StreamerPage.wait_until_loaded()` + `screenshot` fixture |
 
-`StarCraft II` is the task's scenario; the second row shows that a new search
-case is one line in the Examples table. A streamer counts as relevant when the
+`StarCraft II` is the task's scenario and the only case in a default run. The
+`@extra` table shows that a new search case is one line of data; it runs only
+when asked for (`pytest -m extra`, or `-m "extra or not extra"` for everything). A streamer counts as relevant when the
 category on its result card equals the searched game (case-insensitive), and
 both the result list and the chosen streamer are asserted on that.
 
@@ -63,7 +68,8 @@ cd twitch_automation
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-pytest                                   # run everything (unit + e2e)
+pytest                                   # unit + the task's e2e scenario
+pytest -m extra                          # extra search cases only (League of Legends)
 pytest -m unit                           # offline framework tests, < 1 s
 pytest -m p0                             # critical path only
 pytest --device "iPhone 14 Pro"          # another emulated device

@@ -17,7 +17,11 @@ Feature: Watch a live streamer found through search on Twitch mobile web
     And the selected streamer is playing "<game>"
     And I take a screenshot of the streamer page
 
-    Examples:
+    Examples: Task scenario
+      | game         | scrolls |
+      | StarCraft II | 2       |
+
+    @extra
+    Examples: Extra search case, opt-in with -m extra
       | game              | scrolls |
-      | StarCraft II      | 2       |
       | League of Legends | 2       |

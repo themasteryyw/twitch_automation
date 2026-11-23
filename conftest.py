@@ -38,6 +38,16 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "device(name): run this test on a specific emulated device")
 
 
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Keep the default run to the task's scenario: 'extra' cases run only when -m asks for them."""
+    if "extra" in (config.getoption("markexpr") or ""):
+        return
+    extra = [item for item in items if item.get_closest_marker("extra")]
+    if extra:
+        items[:] = [item for item in items if item not in extra]
+        config.hook.pytest_deselected(items=extra)
+
+
 @pytest.fixture(scope="session")
 def settings(pytestconfig: pytest.Config) -> Settings:
     return pytestconfig.stash[SETTINGS_KEY]
