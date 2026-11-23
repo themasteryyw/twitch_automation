@@ -177,26 +177,19 @@ reporting. A change in one layer does not ripple into the others.
 
 ## Observations on the live site
 
-Verified on m.twitch.tv (Pixel 7 emulation):
+Verified on m.twitch.tv with Chrome mobile emulation:
 
 - **Search icon.** The current mobile home page has no search icon in the top
   bar; the magnifier icon lives in the bottom navigation ("Browse"), which
   opens `/directory` with the search box. Step 2 clicks that icon.
 - **Scroll down 2 times.** On the default "Top" results tab the page is only
-  slightly taller than the viewport (e.g. 1194 px vs 919 px), so the first
-  scroll already reaches the bottom. Both scrolls are still performed as the
-  scenario requires; `scroll_down()` logs the before/after position and a
-  WARNING when a scroll cannot move, so this is visible in the run log.
-- **Mature-content gate not seen on m.twitch.tv.** Logged-out
-  channels in GTA V (a mature-rated game) and "Pools, Hot Tubs, and Beaches"
-  played straight away with no gate, and the Slots (gambling) category listed
-  no live channels at all despite showing 14.1K viewers. The gate handling is
-  therefore defensive and **not verified against a real gate on mobile web**.
-  Its locators follow the selector used by maintained Twitch tools such as
-  FrankerFaceZ (`content-classification-gate-overlay-start-watching-button`).
-  Purple-adblock's e2e findings (desktop) report that a logged-out
-  viewer gets the gate with only "Log In" / "Sign Up", which is why gated
-  channels are skipped rather than dismissed. The skip path is covered by
-  offline unit tests (`tests/unit/test_content_gate.py`): a gate without
-  "Start Watching" blocks playback, `select_streamer()` moves on to the next
-  channel, and it gives up after `max_attempts`.
+  slightly taller than the viewport, so the first scroll already reaches the
+  bottom. Both scrolls are still performed as the scenario requires;
+  `scroll_down()` logs the before/after position and a WARNING when a scroll
+  cannot move, so this is visible in the run log.
+- **Mature-content gate not seen on m.twitch.tv** (checked on GTA V and other
+  mature categories). The handling is defensive and not verified against a
+  real gate on mobile web. Locators follow FrankerFaceZ
+  (`content-classification-gate-overlay-start-watching-button`); a logged-out
+  viewer may get only "Log In" / "Sign Up", so gated channels are skipped. The
+  skip path is covered by `tests/unit/test_content_gate.py`.
