@@ -87,12 +87,14 @@ ruff format --check .
 
 ### CI
 
-`.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+`.github/workflows/ci.yml` runs on every push to `main`, on pull requests and
+nightly (so a Twitch UI change is caught even without a push):
 
 1. **lint-and-unit**: `ruff check`, `ruff format --check` and `pytest -m unit`
    (no browser or network, so a Twitch outage cannot hide a framework regression)
-2. **test**: `pytest -m "not unit" --headless` on Ubuntu with Chrome; `artifacts/`
-   (report, logs, screenshots) is uploaded as a build artifact even when the run fails
+2. **test**: `pytest -m "not unit" --headless` on Ubuntu with Chrome, once per
+   emulated device (Galaxy S20, Pixel 7, iPhone 14 Pro) as parallel matrix jobs;
+   each job uploads its `artifacts/` (report, logs, screenshots) even when it fails
 
 ### Configuration
 
@@ -106,8 +108,17 @@ Every value resolves as **CLI option > environment variable > default**
 | Headless | `--headless` | `HEADLESS` | `false` |
 | Explicit-wait timeout (s) | `--timeout` | `TIMEOUT` | `15` |
 | Video start timeout (s) | – | `VIDEO_TIMEOUT` | `45` |
+| Remote WebDriver hub | `--remote-url` | `SELENIUM_REMOTE_URL` | empty (local Chrome) |
 
 A single test can pin a device with `@pytest.mark.device("Galaxy S20")`.
+
+`--remote-url` sends the same Chrome options (including mobile emulation) to a
+Selenium Grid or cloud hub instead of starting Chrome locally, so the suite can
+scale beyond one machine without code changes:
+
+```bash
+pytest --headless --remote-url http://localhost:4444/wd/hub -n 4
+```
 
 Headed runs open Chrome as an app-style window (no tab strip or address bar) sized
 to the emulated phone, because a normal Chrome window on macOS cannot be narrower
@@ -131,7 +142,7 @@ twitch_automation/
 │   ├── settings.py        # immutable Settings: CLI > env > default
 │   └── devices.py         # device registry for Chrome mobileEmulation
 ├── framework/             # site-agnostic core, reusable for any web app
-│   ├── driver_factory.py  # Chrome + mobile emulation, eager load, muted autoplay
+│   ├── driver_factory.py  # local or remote Chrome + mobile emulation, eager load
 │   ├── base_page.py       # BasePage: "loaded" contract, element helpers, go_to()
 │   ├── waits.py           # Waiter + named JS conditions (no sleeps)
 │   ├── popup_handler.py   # data-driven pop-up table + handler
@@ -143,17 +154,17 @@ twitch_automation/
 │       ├── home_page.py          # home -> tap the search (Browse) icon
 │       ├── browse_page.py        # type the search term
 │       ├── search_results_page.py  # scroll, pick a streamer (skips gated channels)
-│       └── streamer_page.py      # wait until the live video is really playing
+│       └── streamer_page.py      # wait until the live video time is advancing
 ├── features/
 │   └── search_streamer.feature  # the 6-step scenario in Gherkin (test data in Examples)
 ├── tests/
 │   ├── conftest.py        # fixtures: driver -> pages, screenshot factory
 │   ├── e2e/
 │   │   └── test_search_streamer.py  # pytest-bdd step definitions
-│   └── unit/              # offline tests: card parsing, settings, devices, pop-ups, waits
-├── .github/workflows/ci.yml  # lint + headless test on every push / PR
+│   └── unit/              # offline tests: card parsing, settings, devices, pop-ups, waits, gate, driver
+├── .github/workflows/ci.yml  # lint + unit, then headless e2e per device; push / PR / nightly
 ├── conftest.py            # CLI options, settings, logging, failure artifacts
-├── pytest.ini             # markers (p0 / p1 / wap / unit), feature dir, live log format
+├── pytest.ini             # markers (p0 / p1 / wap / unit / extra), feature dir, live log format
 ├── pyproject.toml         # ruff lint/format config
 ├── requirements.txt
 ├── docs/                  # demo GIF for this README
@@ -166,7 +177,7 @@ reporting. A change in one layer does not ripple into the others.
 
 ## Observations on the live site
 
-Verified on m.twitch.tv (Pixel 7 emulation) on 2026-11-18:
+Verified on m.twitch.tv (Pixel 7 emulation):
 
 - **Search icon.** The current mobile home page has no search icon in the top
   bar; the magnifier icon lives in the bottom navigation ("Browse"), which
@@ -176,14 +187,16 @@ Verified on m.twitch.tv (Pixel 7 emulation) on 2026-11-18:
   scroll already reaches the bottom. Both scrolls are still performed as the
   scenario requires; `scroll_down()` logs the before/after position and a
   WARNING when a scroll cannot move, so this is visible in the run log.
-- **Mature-content gate not seen on m.twitch.tv.** On 2026-11-19, logged-out
+- **Mature-content gate not seen on m.twitch.tv.** Logged-out
   channels in GTA V (a mature-rated game) and "Pools, Hot Tubs, and Beaches"
   played straight away with no gate, and the Slots (gambling) category listed
   no live channels at all despite showing 14.1K viewers. The gate handling is
   therefore defensive and **not verified against a real gate on mobile web**.
   Its locators follow the selector used by maintained Twitch tools such as
   FrankerFaceZ (`content-classification-gate-overlay-start-watching-button`).
-  Purple-adblock's e2e findings (2026-10-07, desktop) report that a logged-out
+  Purple-adblock's e2e findings (desktop) report that a logged-out
   viewer gets the gate with only "Log In" / "Sign Up", which is why gated
-  channels are skipped rather than dismissed. The skip path was tested by
-  simulating a gate on the first streamer.
+  channels are skipped rather than dismissed. The skip path is covered by
+  offline unit tests (`tests/unit/test_content_gate.py`): a gate without
+  "Start Watching" blocks playback, `select_streamer()` moves on to the next
+  channel, and it gives up after `max_attempts`.

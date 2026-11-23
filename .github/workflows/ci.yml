@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"  # nightly 09:00 Taiwan time: catches Twitch UI changes between pushes
 
 jobs:
   lint-and-unit:
@@ -24,6 +26,11 @@ jobs:
     needs: lint-and-unit
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false  # one device failing must not hide the others' results
+      matrix:
+        device: ["Galaxy S20", "Pixel 7", "iPhone 14 Pro"]
+    name: test (${{ matrix.device }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,11 +40,11 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - run: pip install -r requirements.txt
       - name: E2E BDD scenarios (headless Chrome, mobile emulation)
-        run: pytest -m "not unit" --headless
+        run: pytest -m "not unit" --headless --device "${{ matrix.device }}"
       - name: Upload report, logs and screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-artifacts
+          name: test-artifacts-${{ matrix.device }}
           path: artifacts/
           if-no-files-found: ignore
