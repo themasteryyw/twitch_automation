@@ -108,6 +108,10 @@ Every value resolves as **CLI option > environment variable > default**
 
 A single test can pin a device with `@pytest.mark.device("Galaxy S20")`.
 
+Headed runs open Chrome as an app-style window (no tab strip or address bar) sized
+to the emulated phone, because a normal Chrome window on macOS cannot be narrower
+than 500pt and would show a grey strip beside the 360pt viewport.
+
 ### Artifacts
 
 Written to `artifacts/` (git-ignored):
