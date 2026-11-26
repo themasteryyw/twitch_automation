@@ -16,6 +16,16 @@ TWITCH_POPUPS: tuple[Popup, ...] = (
         detect=(By.CSS_SELECTOR, '[role="dialog"][aria-label*="Open in App"]'),
         dismiss=((By.XPATH, '//button[.//p[normalize-space()="Keep using web"]]'),),
     ),
+    # Upsell sheets ("Get the Twitch app", "Create an account ...") are A/B variants with
+    # no aria-label; the stable hook is their "Continue watching" button.
+    Popup(
+        name="Upsell bottom sheet",
+        detect=(By.XPATH, '//*[@role="dialog"][.//button[normalize-space()="Continue watching"]]'),
+        dismiss=(
+            (By.XPATH, '//*[@role="dialog"]//button[normalize-space()="Continue watching"]'),
+            (By.XPATH, '//*[@role="dialog"]//button[@aria-label="Activate to close dialog"]'),
+        ),
+    ),
     Popup(
         name="Mature content gate",
         detect=CONTENT_GATE,

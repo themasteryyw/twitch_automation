@@ -52,8 +52,8 @@ when asked for (`pytest -m extra`, or `-m "extra or not extra"` for everything).
 category on its result card equals the searched game (case-insensitive), and
 both the result list and the chosen streamer are asserted on that.
 
-Pop-ups that can block the flow ("Open in App" bottom sheet, mature-content
-gate, cookie banner) are handled automatically on every page. A mature-content
+Pop-ups that can block the flow ("Open in App" and sign-up/app upsell bottom
+sheets, mature-content gate, cookie banner) are handled automatically on every page. A mature-content
 gate that cannot be passed makes the test pick another streamer.
 
 ## Quick start
